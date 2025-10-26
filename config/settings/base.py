@@ -12,17 +12,9 @@ env_file = BASE_DIR / ".env"
 if env_file.exists():
     environ.Env.read_env(env_file)
 
-print(">>>@@@ ALLOWED_HOSTS:", os.getenv("ALLOWED_HOSTS", "rate-movies-api.onrender.com,127.0.0.1,localhost,test"))
-print(">>>@@@ ALLOWED_HOSTS:", env("ALLOWED_HOSTS", default=""))
-
-DEBUG = env.bool("DEBUG", default=False)
+DEBUG = False
+ALLOWED_HOSTS = "rate-movies-api.onrender.com,127.0.0.1,localhost,test"
 SECRET_KEY = env("SECRET_KEY", default="dev-secret-change-me")
-
-allowed_hosts_value = os.getenv("ALLOWED_HOSTS", "")
-print(">>> DEBUG:", DEBUG)
-print(">>> ALLOWED_HOSTS (raw):", allowed_hosts_value)
-
-ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_value.split(",") if h.strip()] or ["*"]
 
 
 INSTALLED_APPS = [
