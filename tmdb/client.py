@@ -1,7 +1,6 @@
 import requests
 from typing import Any, Dict, Union
 from django.conf import settings
-from functools import lru_cache
 from django.core.cache import cache
 
 

@@ -1,4 +1,4 @@
-from typing import Any, Union, cast
+from typing import Any, cast
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -8,7 +8,7 @@ from favorites.models import FavoritedMovie
 from tmdb.client import TMDBClient
 from tmdb.serializers import DiscoverQueryParamsSerializer, MovieDetailsSerializer, MovieDiscoverListSerializer
 
-class BaseTMDBView(APIView):
+class BaseTMDBView(APIView): #TODO - reutilizar
     """
     Base view that provides a shared TMDB client instance.
     """
