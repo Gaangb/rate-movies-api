@@ -1,15 +1,27 @@
 from pathlib import Path
+import os
+import environ
 from typing import Union
 
-import environ
-
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-env = environ.Env(DEBUG=(bool, False))
-environ.Env.read_env(BASE_DIR / ".env")
 
-DEBUG = env("DEBUG", default=False)
+env = environ.Env(DEBUG=(bool, False))
+
+env_file = BASE_DIR / ".env"
+if env_file.exists():
+    environ.Env.read_env(env_file)
+
+DEBUG = env.bool("DEBUG", default=False)
 SECRET_KEY = env("SECRET_KEY", default="dev-secret-change-me")
-ALLOWED_HOSTS = [h.strip() for h in env("ALLOWED_HOSTS", default="*").split(",")]
+
+allowed_hosts_value = os.getenv("ALLOWED_HOSTS", "")
+print(">>> DEBUG:", DEBUG)
+print(">>> ALLOWED_HOSTS (raw):", allowed_hosts_value)
+
+if allowed_hosts_value:
+    ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_value.split(",")]
+else:
+    ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -38,6 +50,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -53,6 +66,7 @@ TEMPLATES = [
         },
     }
 ]
+
 WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
@@ -100,6 +114,7 @@ SPECTACULAR_SETTINGS: dict[
 CORS_ALLOWED_ORIGINS = [
     o.strip() for o in env("CORS_ALLOWED_ORIGINS", default="").split(",") if o
 ]
+
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 SECURE_BROWSER_XSS_FILTER = True
@@ -111,6 +126,5 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": "INFO"},
 }
-
 
 TMDB_BEARER = env("TMDB_API_KEY", default="")
