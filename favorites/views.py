@@ -123,7 +123,6 @@ class FavoritesView(BaseTMDBView):
                 {"error": "Token de autenticação TMDb não fornecido."}, status=401
             )
 
-        # Envia para o TMDb
         tmdb_payload = {
             "media_type": media_type,
             "media_id": movie_id,
@@ -135,7 +134,6 @@ class FavoritesView(BaseTMDBView):
             json=tmdb_payload,
         )
 
-        # Atualiza banco local
         if favorite:
             FavoritedMovie.objects.get_or_create(
                 account_id=account_id, movie_id=movie_id

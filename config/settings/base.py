@@ -13,7 +13,7 @@ if env_file.exists():
     environ.Env.read_env(env_file)
 
 DEBUG = False
-ALLOWED_HOSTS = "rate-movies-api.onrender.com,127.0.0.1,localhost,test"
+ALLOWED_HOSTS = ['*']
 SECRET_KEY = env("SECRET_KEY", default="dev-secret-change-me")
 
 
