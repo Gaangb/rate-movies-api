@@ -1,6 +1,5 @@
 
 from pathlib import Path
-import os
 import environ
 from typing import Union
 
@@ -12,10 +11,10 @@ env_file = BASE_DIR / ".env"
 if env_file.exists():
     environ.Env.read_env(env_file)
 
-DEBUG = False
-ALLOWED_HOSTS = ['*']
 SECRET_KEY = env("SECRET_KEY", default="dev-secret-change-me")
-
+DEBUG = env.bool("DEBUG", default=False)
+allowed_hosts_value = env("ALLOWED_HOSTS", default="")
+ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_value.split(",") if h.strip()] or ["*"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",

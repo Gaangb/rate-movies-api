@@ -110,8 +110,10 @@ poetry --version
 > **Note:** Poetry 2 no longer creates virtual environments automatically with `poetry shell`.  
 > You can activate the environment manually using:
 > ```bash
-> poetry env use 3.12
-> poetry shell
+> poetry env activate
+> Run poetry env activate output
+> poetry install
+> poetry run python manage.py runserver
 > ```
 
 If you prefer not to activate the shell, prefix all commands with `poetry run`.
