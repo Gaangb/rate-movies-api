@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(BASE_DIR / ".env")
 
-DEBUG = env("DEBUG", default=True)
+DEBUG = env("DEBUG", default=False)
 SECRET_KEY = env("SECRET_KEY", default="dev-secret-change-me")
 ALLOWED_HOSTS = [h.strip() for h in env("ALLOWED_HOSTS", default="*").split(",")]
 
