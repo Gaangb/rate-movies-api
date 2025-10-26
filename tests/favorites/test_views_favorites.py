@@ -1,9 +1,10 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from rest_framework.test import APIRequestFactory
 
 from favorites.models import FavoritedMovie
-from favorites.views import FavoritesView, TMDB_BASE_URL
+from favorites.views import TMDB_BASE_URL, FavoritesView
 
 
 @pytest.fixture
@@ -36,7 +37,7 @@ class TestFavoritesViewGET:
         mock_resp.json.return_value = {"results": [{"id": 123, "title": "Movie A"}]}
         mock_get.return_value = mock_resp
 
-        headers = {"Authorization": "Bearer test_token"}
+        headers = {"HTTP_AUTHORIZATION": "Bearer test_token"}
         request = api_factory.get("/api/v1/favorites/?account_id=42&page=1", **headers)
         view = FavoritesView.as_view()
 
@@ -58,8 +59,10 @@ class TestFavoritesViewGET:
 @pytest.mark.django_db
 class TestFavoritesViewPOST:
     def test_missing_account_or_movie_returns_400(self, api_factory):
-        headers = {"Authorization": "Bearer token"}
-        request = api_factory.post("/api/v1/favorites/", {"account_id": 1}, format="json", **headers)
+        headers = {"HTTP_AUTHORIZATION": "Bearer token"}
+        request = api_factory.post(
+            "/api/v1/favorites/", {"account_id": 1}, format="json", **headers
+        )
         view = FavoritesView.as_view()
 
         response = view(request)
@@ -82,9 +85,11 @@ class TestFavoritesViewPOST:
         mock_resp.json.return_value = {"status_message": "Success."}
         mock_post.return_value = mock_resp
 
-        headers = {"Authorization": "Bearer test_token"}
+        headers = {"HTTP_AUTHORIZATION": "Bearer test_token"}
         payload = {"account_id": 10, "movie_id": 555, "favorite": True}
-        request = api_factory.post("/api/v1/favorites/", payload, format="json", **headers)
+        request = api_factory.post(
+            "/api/v1/favorites/", payload, format="json", **headers
+        )
         view = FavoritesView.as_view()
 
         response = view(request)
@@ -112,9 +117,11 @@ class TestFavoritesViewPOST:
         mock_resp.json.return_value = {"status_message": "Removed."}
         mock_post.return_value = mock_resp
 
-        headers = {"Authorization": "Bearer test_token"}
+        headers = {"HTTP_AUTHORIZATION": "Bearer test_token"}
         payload = {"account_id": 20, "movie_id": 888, "favorite": False}
-        request = api_factory.post("/api/v1/favorites/", payload, format="json", **headers)
+        request = api_factory.post(
+            "/api/v1/favorites/", payload, format="json", **headers
+        )
         view = FavoritesView.as_view()
 
         response = view(request)

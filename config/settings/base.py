@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Union
+
 import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -11,10 +12,18 @@ SECRET_KEY = env("SECRET_KEY", default="dev-secret-change-me")
 ALLOWED_HOSTS = [h.strip() for h in env("ALLOWED_HOSTS", default="*").split(",")]
 
 INSTALLED_APPS = [
-    "django.contrib.admin", "django.contrib.auth", "django.contrib.contenttypes",
-    "django.contrib.sessions", "django.contrib.messages", "django.contrib.staticfiles",
-    "corsheaders", "rest_framework", "django_filters", "drf_spectacular",
-    "favorites", "tmdb",
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "corsheaders",
+    "rest_framework",
+    "django_filters",
+    "drf_spectacular",
+    "favorites",
+    "tmdb",
 ]
 
 MIDDLEWARE = [
@@ -29,17 +38,21 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
-TEMPLATES = [{
-    "BACKEND": "django.template.backends.django.DjangoTemplates",
-    "DIRS": [],
-    "APP_DIRS": True,
-    "OPTIONS": {"context_processors": [
-        "django.template.context_processors.debug",
-        "django.template.context_processors.request",
-        "django.contrib.auth.context_processors.auth",
-        "django.contrib.messages.context_processors.messages",
-    ]},
-}]
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ]
+        },
+    }
+]
 WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
@@ -60,14 +73,16 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.TokenAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-    "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.AllowAny",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
 }
 
-SPECTACULAR_SETTINGS: dict[str, Union[str, bool, list[dict[str, list[str]]], dict[str, dict[str, str]]]] =  {
+SPECTACULAR_SETTINGS: dict[
+    str, Union[str, bool, list[dict[str, list[str]]], dict[str, dict[str, str]]]
+] = {
     "TITLE": "Movies API",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
@@ -82,7 +97,9 @@ SPECTACULAR_SETTINGS: dict[str, Union[str, bool, list[dict[str, list[str]]], dic
     },
 }
 
-CORS_ALLOWED_ORIGINS = [o.strip() for o in env("CORS_ALLOWED_ORIGINS", default="").split(",") if o]
+CORS_ALLOWED_ORIGINS = [
+    o.strip() for o in env("CORS_ALLOWED_ORIGINS", default="").split(",") if o
+]
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 SECURE_BROWSER_XSS_FILTER = True

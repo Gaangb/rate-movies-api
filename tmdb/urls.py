@@ -1,9 +1,6 @@
 from django.urls import path
 
-from .views import (
-    DiscoverMoviesView,
-    MovieDetailsView,
-)
+from .views import DiscoverMoviesView, MovieDetailsView
 
 urlpatterns = [
     path("discover/", DiscoverMoviesView.as_view(), name="discover-movies"),

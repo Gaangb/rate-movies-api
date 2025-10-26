@@ -1,14 +1,21 @@
 from typing import Any, cast
-from rest_framework.views import APIView
+
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework import status
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+from rest_framework.views import APIView
+
 from favorites.models import FavoritedMovie
 from tmdb.client import TMDBClient
-from tmdb.serializers import DiscoverQueryParamsSerializer, MovieDetailsSerializer, MovieDiscoverListSerializer
+from tmdb.serializers import (
+    DiscoverQueryParamsSerializer,
+    MovieDetailsSerializer,
+    MovieDiscoverListSerializer,
+)
 
-class BaseTMDBView(APIView): #TODO - reutilizar
+
+class BaseTMDBView(APIView):  # TODO - reutilizar
     """
     Base view that provides a shared TMDB client instance.
     """
@@ -24,13 +31,14 @@ class DiscoverMoviesView(BaseTMDBView):
     """
     Returns TMDb movie discovery results (cached and localized).
     """
+
     serializer_class = MovieDiscoverListSerializer
 
     @extend_schema(
         tags=["Movies"],
         summary="Discover movies",
         description="Fetches a paginated list of movies from TMDb based on filtering and sorting parameters, "
-                    "and marks as favorite those stored locally for the given account_id.",
+        "and marks as favorite those stored locally for the given account_id.",
         parameters=[
             DiscoverQueryParamsSerializer,
             OpenApiParameter(
@@ -65,8 +73,9 @@ class DiscoverMoviesView(BaseTMDBView):
         account_id = request.query_params.get("account_id")
         if account_id:
             favorite_ids = set(
-                FavoritedMovie.objects.filter(account_id=account_id)
-                .values_list("movie_id", flat=True)
+                FavoritedMovie.objects.filter(account_id=account_id).values_list(
+                    "movie_id", flat=True
+                )
             )
 
             for movie in results:
@@ -85,6 +94,7 @@ class MovieDetailsView(BaseTMDBView):
     """
     Returns detailed information for a specific movie.
     """
+
     serializer_class = MovieDetailsSerializer
 
     @extend_schema(
@@ -111,6 +121,8 @@ class MovieDetailsView(BaseTMDBView):
             404: OpenApiResponse(description="Movie not found on TMDb."),
         },
     )
-    def get(self, request: Request, tmdb_id: int, *args: Any, **kwargs: Any) -> Response:
+    def get(
+        self, request: Request, tmdb_id: int, *args: Any, **kwargs: Any
+    ) -> Response:
         data: dict[str, Any] = self.tmdb_client.movie_details(tmdb_id)
         return Response(data, status=status.HTTP_200_OK)

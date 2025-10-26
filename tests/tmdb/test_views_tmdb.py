@@ -1,10 +1,11 @@
-import pytest
-from unittest.mock import patch, MagicMock
-from rest_framework.test import APIRequestFactory
-from rest_framework import status
+from unittest.mock import MagicMock, patch
 
-from tmdb.views import DiscoverMoviesView, MovieDetailsView
+import pytest
+from rest_framework import status
+from rest_framework.test import APIRequestFactory
+
 from favorites.models import FavoritedMovie
+from tmdb.views import DiscoverMoviesView, MovieDetailsView
 
 
 @pytest.fixture
@@ -35,13 +36,12 @@ class TestDiscoverMoviesView:
         mock_instance.discover_movies.assert_called_once()
 
     @patch("tmdb.views.TMDBClient")
-    def test_discover_movies_with_account_id_and_favorite(self, mock_client, api_factory, db):
-        """Should mark favorite=True for movies present in the database for given account_id."""
-        # Arrange: DB contains a favorite
+    def test_discover_movies_with_account_id_and_favorite(
+        self, mock_client, api_factory, db
+    ):
         account_id = 42
         FavoritedMovie.objects.create(account_id=account_id, movie_id=200)
 
-        # Mock TMDBClient
         mock_instance = MagicMock()
         mock_instance.discover_movies.return_value = {
             "page": 1,
@@ -89,7 +89,7 @@ class TestMovieDetailsView:
         mock_instance.movie_details.return_value = {
             "id": 500,
             "title": "Interstellar",
-            "overview": "A space exploration film."
+            "overview": "A space exploration film.",
         }
         mock_client.return_value = mock_instance
 

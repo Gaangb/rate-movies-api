@@ -1,5 +1,6 @@
-import requests
 from typing import Any, Dict, Union
+
+import requests
 from django.conf import settings
 from django.core.cache import cache
 
@@ -20,8 +21,10 @@ class TMDBClient:
         self.session.headers.update(self.headers)
         self.timeout = 10
 
-    #TODO - isso aq ta cacheando sem usar o lru_cache???
-    def _cached_request(self, path: str, params: dict[str, Union[str, int, bool]]) -> Dict[str, Any]:
+    # TODO - isso aq ta cacheando sem usar o lru_cache???
+    def _cached_request(
+        self, path: str, params: dict[str, Union[str, int, bool]]
+    ) -> Dict[str, Any]:
         url = f"{self.BASE}{path}"
         cache_key = f"tmdb:{url}:{str(params)}"
         if cached := cache.get(cache_key):
@@ -33,7 +36,9 @@ class TMDBClient:
         cache.set(cache_key, data, timeout=600)
         return data
 
-    def discover_movies(self, params: dict[str, Union[str, int, bool]]) -> Dict[str, Any]:
+    def discover_movies(
+        self, params: dict[str, Union[str, int, bool]]
+    ) -> Dict[str, Any]:
         return self._cached_request(
             path="/discover/movie",
             params=params,
@@ -49,7 +54,9 @@ class TMDBClient:
         if details.get("poster_path"):
             details["poster_path"] = f"{self.IMAGE_BASE}w500{details['poster_path']}"
         if details.get("backdrop_path"):
-            details["backdrop_path"] = f"{self.IMAGE_BASE}w780{details['backdrop_path']}"
+            details["backdrop_path"] = (
+                f"{self.IMAGE_BASE}w780{details['backdrop_path']}"
+            )
 
         videos_data = self._cached_request(
             f"/movie/{tmdb_id}/videos",

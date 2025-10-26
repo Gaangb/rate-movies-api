@@ -1,10 +1,11 @@
 from typing import Any
-from rest_framework.views import APIView
+
+import requests
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
+from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework import status
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
-import requests
+from rest_framework.views import APIView
 
 from favorites.models import FavoritedMovie
 
@@ -16,7 +17,9 @@ class BaseTMDBView(APIView):
     Base view que injeta automaticamente o token TMDb do header Authorization.
     """
 
-    def initialize_request(self, request: Request, *args: Any, **kwargs: Any) -> Request:
+    def initialize_request(
+        self, request: Request, *args: Any, **kwargs: Any
+    ) -> Request:
         req = super().initialize_request(request=request, *args, **kwargs)
         auth_header = req.headers.get("Authorization")
 
@@ -41,7 +44,7 @@ class FavoritesView(BaseTMDBView):
         tags=["Favorites"],
         summary="Listar filmes favoritados",
         description="Retorna todos os filmes favoritados de uma conta TMDB específica. "
-                    "O token de autenticação deve ser enviado via header Authorization.",
+        "O token de autenticação deve ser enviado via header Authorization.",
         parameters=[
             OpenApiParameter(
                 name="account_id",
@@ -58,7 +61,11 @@ class FavoritesView(BaseTMDBView):
                 location=OpenApiParameter.QUERY,
             ),
         ],
-        responses={200: OpenApiResponse(description="Lista de filmes favoritados obtida com sucesso")},
+        responses={
+            200: OpenApiResponse(
+                description="Lista de filmes favoritados obtida com sucesso"
+            )
+        },
     )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """Listar favoritos"""
@@ -107,13 +114,21 @@ class FavoritesView(BaseTMDBView):
         media_type = request.data.get("media_type", "movie")
 
         if not account_id or not movie_id:
-            return Response({"error": "account_id e movie_id são obrigatórios"}, status=400)
+            return Response(
+                {"error": "account_id e movie_id são obrigatórios"}, status=400
+            )
 
         if not self.tmdb_headers:
-            return Response({"error": "Token de autenticação TMDb não fornecido."}, status=401)
+            return Response(
+                {"error": "Token de autenticação TMDb não fornecido."}, status=401
+            )
 
         # Envia para o TMDb
-        tmdb_payload = {"media_type": media_type, "media_id": movie_id, "favorite": favorite}
+        tmdb_payload = {
+            "media_type": media_type,
+            "media_id": movie_id,
+            "favorite": favorite,
+        }
         tmdb_resp = requests.post(
             f"{TMDB_BASE_URL}/account/{account_id}/favorite",
             headers=self.tmdb_headers,
@@ -122,8 +137,12 @@ class FavoritesView(BaseTMDBView):
 
         # Atualiza banco local
         if favorite:
-            FavoritedMovie.objects.get_or_create(account_id=account_id, movie_id=movie_id)
+            FavoritedMovie.objects.get_or_create(
+                account_id=account_id, movie_id=movie_id
+            )
         else:
-            FavoritedMovie.objects.filter(account_id=account_id, movie_id=movie_id).delete()
+            FavoritedMovie.objects.filter(
+                account_id=account_id, movie_id=movie_id
+            ).delete()
 
         return Response(tmdb_resp.json(), status=tmdb_resp.status_code)

@@ -1,5 +1,7 @@
-from rest_framework import serializers
 from typing import Any, TypedDict
+
+from rest_framework import serializers
+
 
 class DiscoverQueryParamsDict(TypedDict):
     language: str
@@ -7,6 +9,7 @@ class DiscoverQueryParamsDict(TypedDict):
     include_adult: bool
     include_video: bool
     sort_by: str
+
 
 class DiscoverQueryParamsSerializer(serializers.Serializer[DiscoverQueryParamsDict]):
     language = serializers.CharField(default="en-US")
