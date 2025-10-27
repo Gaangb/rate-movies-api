@@ -83,7 +83,7 @@ tests/
 
 ### 1) Clone
 ```bash
-git clone https://github.com/<your-username>/movies-api.git
+git clone https://github.com/angelogabrieldev/movies-api.git
 cd movies-api
 ```
 
