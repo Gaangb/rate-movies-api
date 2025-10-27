@@ -8,7 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml poetry.lock* ./
 RUN pip install --upgrade pip && pip install poetry
@@ -16,6 +16,9 @@ RUN poetry config virtualenvs.create false && poetry install --no-interaction --
 
 COPY . .
 
+RUN chmod +x ./entrypoint.sh
+
 EXPOSE 8000
 
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

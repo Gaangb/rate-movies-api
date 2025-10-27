@@ -24,14 +24,14 @@ class FavoritedMovie(models.Model):
         return f"{self.title or 'Movie'} ({self.movie_id}) - Account {self.account_id}"
 
 
-class FavoriteList(models.Model):
+class FavoritedList(models.Model):
     account_id = models.BigIntegerField()
     list_name = models.CharField(max_length=255)
     movie_ids = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "favorite_lists"
+        db_table = "favorited_lists"
         indexes = [
             models.Index(fields=["account_id"]),
         ]

@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
             field=models.FloatField(default=0.0),
         ),
         migrations.CreateModel(
-            name="FavoriteList",
+            name="FavoritedList",
             fields=[
                 (
                     "id",

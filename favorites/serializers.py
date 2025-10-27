@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from favorites.models import FavoriteList, FavoritedMovie
+from favorites.models import FavoritedList, FavoritedMovie
 
 
 class FavoritedMovieSerializer(serializers.ModelSerializer):
@@ -23,9 +23,9 @@ class FavoritedMovieSerializer(serializers.ModelSerializer):
         ]
 
 
-class FavoriteListSerializer(serializers.ModelSerializer):
+class FavoritedListSerializer(serializers.ModelSerializer):
     movie_ids = serializers.ListField(child=serializers.IntegerField(), required=False)
 
     class Meta:
-        model = FavoriteList
+        model = FavoritedList
         fields = ["account_id", "list_name", "movie_ids", "created_at"]

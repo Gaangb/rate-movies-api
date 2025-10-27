@@ -2,8 +2,8 @@ from typing import Any
 
 import requests
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from favorites.models import FavoriteList, FavoritedMovie
-from favorites.serializers import FavoriteListSerializer, FavoritedMovieSerializer
+from favorites.models import FavoritedList, FavoritedMovie
+from favorites.serializers import FavoritedListSerializer, FavoritedMovieSerializer
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -113,7 +113,7 @@ class FavoritesView(BaseTMDBView):
         return Response(tmdb_resp.json(), status=tmdb_resp.status_code)
 
 
-class ShareFavoriteListView(APIView):
+class ShareFavoritedListView(APIView):
     @extend_schema(
         tags=["Favorites"],
         summary="Create shareable favorites list",
@@ -127,7 +127,7 @@ class ShareFavoriteListView(APIView):
                 }
             }
         },
-        responses={201: OpenApiResponse(response=FavoriteListSerializer)},
+        responses={201: OpenApiResponse(response=FavoritedListSerializer)},
     )
     def post(self, request: Request) -> Response:
         account_id = request.data.get("account_id")
@@ -150,13 +150,13 @@ class ShareFavoriteListView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        fav_list, _ = FavoriteList.objects.update_or_create(
+        fav_list, _ = FavoritedList.objects.update_or_create(
             account_id=account_id, list_name=list_name, defaults={"movie_ids": valid_ids}
         )
-        return Response(FavoriteListSerializer(fav_list).data, status=status.HTTP_201_CREATED)
+        return Response(FavoritedListSerializer(fav_list).data, status=status.HTTP_201_CREATED)
 
 
-class GetSharedFavoriteListView(APIView):
+class GetSharedFavoritedListView(APIView):
     @extend_schema(
         tags=["Favorites"],
         summary="Get shared favorites by list name",
@@ -165,8 +165,8 @@ class GetSharedFavoriteListView(APIView):
     )
     def get(self, request: Request, list_name: str) -> Response:
         try:
-            fav_list = FavoriteList.objects.filter(list_name__iexact=list_name).latest("created_at")
-        except FavoriteList.DoesNotExist:
+            fav_list = FavoritedList.objects.filter(list_name__iexact=list_name).latest("created_at")
+        except FavoritedList.DoesNotExist:
             return Response({"error": "No shared list found with this name."}, status=status.HTTP_404_NOT_FOUND)
 
         movies = FavoritedMovie.objects.filter(
