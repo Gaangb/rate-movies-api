@@ -15,7 +15,9 @@ SECRET_KEY = env("SECRET_KEY", default="dev-secret-change-me")
 DEBUG = env.bool("DEBUG", default=False)
 allowed_hosts_value = env("ALLOWED_HOSTS", default="")
 ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_value.split(",") if h.strip()] or ["*"]
-
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+]
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",

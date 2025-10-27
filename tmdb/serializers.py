@@ -1,5 +1,4 @@
 from typing import Any, TypedDict
-
 from rest_framework import serializers
 
 
@@ -63,6 +62,19 @@ class ProviderSerializer(serializers.Serializer):
     flatrate = ProviderItemSerializer(many=True, required=False)
 
 
+class CreditSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    profile_path = serializers.SerializerMethodField()
+    character = serializers.CharField(allow_null=True, required=False)
+    known_for_department = serializers.CharField()
+
+    def get_profile_path(self, obj: dict[str, Any]) -> str | None:
+        path = obj.get("profile_path")
+        if not path:
+            return None
+        return f"https://image.tmdb.org/t/p/w185{path}"
+
+
 class MovieDetailsSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     title = serializers.CharField()
@@ -75,19 +87,4 @@ class MovieDetailsSerializer(serializers.Serializer):
     backdrop_path = serializers.CharField(allow_null=True, required=False)
     videos = VideoSerializer(many=True, required=False)
     providers = ProviderSerializer(required=False, allow_null=True)
-
-
-class CreditSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    profile_path = serializers.SerializerMethodField()
-    character = serializers.CharField(allow_null=True, required=False)
-    known_for_department = serializers.CharField()
-
-    def get_profile_path(self, obj: dict[str, Any]) -> str | None:
-        """
-        Retorna a URL completa da imagem de perfil do ator/diretor.
-        """
-        path = obj.get("profile_path")
-        if not path:
-            return None
-        return f"https://image.tmdb.org/t/p/w185{path}"
+    credits = CreditSerializer(many=True, required=False)
