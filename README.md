@@ -2,57 +2,58 @@
 
 Backend (Django + DRF) that integrates with **TMDb**.  
 It exposes endpoints to **discover**, **search**, and **fetch movie details** from TMDb, plus **favorites** operations that act **directly on TMDb**.  
-For sharing, the API stores **only** `account_id` and a human-friendly `list_name`. The shared listing itself is fetched **live from TMDb**.
+For sharing, the API stores **only** `account_id` and a human-friendly `list_name`; the shared listing itself is fetched **live from TMDb**.
 
 ---
 
 ## Table of Contents
-1. [Overview](#overview)
-2. [Tech Stack](#tech-stack)
-3. [Key Behavior](#key-behavior)
-4. [Project Layout](#project-layout)
-5. [Setup](#setup)
-6. [Environment](#environment)
-7. [Commands](#commands)
-8. [API](#api)
-9. [Testing](#testing)
-10. [Troubleshooting](#troubleshooting)
+1. [Overview](#overview)  
+2. [Tech Stack](#tech-stack)  
+3. [Key Behavior](#key-behavior)  
+4. [Project Layout](#project-layout)  
+5. [Setup](#setup)  
+6. [Environment](#environment)  
+7. [Commands](#commands)  
+8. [API](#api)  
+9. [Testing](#testing)  
+10. [Troubleshooting](#troubleshooting)  
+11. [Deploy & Rationale](#deploy--rationale)  
+12. [Limitations & Next Steps](#limitations--next-steps)
 
 ---
 
 ## Overview
-This service plays the role of a **BFF** for a movie app:
+This service acts as a **BFF** for a movie app:
 
-- **Discover/Search** movies (TMDb).
-- **Movie details** (trailers/providers/credits handled inside the details view).
-- **Favorites**: list and toggle **on TMDb** (no local persistence).
-- **Shared favorites**: store only `account_id` + `list_name`; when someone opens a shared list, the API fetches the **current** favorites from TMDb for that account.
+- **Discover/Search** (TMDb)
+- **Movie details** (trailers/providers/credits handled by the details endpoint)
+- **Favorites**: list and toggle **on TMDb** (no local persistence)
+- **Shared favorites**: stores only `account_id` + `list_name`; when a list is opened, favorites are retrieved **live** from TMDb
 
 ---
 
 ## Tech Stack
-- Python 3.12+
-- Django 5.x
-- Django REST Framework
-- drf-spectacular (OpenAPI)
-- django-environ, django-filter, django-cors-headers
-- requests
-- Poetry
+- Python 3.12+  
+- Django 5.x  
+- Django REST Framework  
+- drf-spectacular (OpenAPI)  
+- django-environ, django-filter, django-cors-headers  
+- requests  
+- Poetry  
 - pytest + pytest-django
 
 ---
 
 ## Key Behavior
 
-- **Authorization**: All TMDb calls require header `Authorization: Bearer <TMDB_V4_TOKEN>`.
-- **Favorites**:
+- **Authorization**: all TMDb calls require the header `Authorization: Bearer <TMDB_V4_TOKEN>`.
+- **Favorites**
   - `GET /favorites/` reads favorites **from TMDb**.
   - `POST /favorites/` toggles favorite **on TMDb**.
-  - No rows are created/updated for favorites locally.
-- **Shared favorites**:
-  - `POST /favorites/share/` stores only `{account_id, list_name}`.
-    - If the same `account_id` shares again, we **update** the `list_name` (idempotent).
-  - `GET /favorites/shared/{list_name}/` loads the record to resolve `account_id` and then fetches **live** favorites from TMDb.
+  - No rows are created/updated locally for favorites.
+- **Shared favorites**
+  - `POST /favorites/share/` stores only `{account_id, list_name}`; if the same `account_id` shares again, the `list_name` is **updated** (idempotent).
+  - `GET /favorites/shared/{list_name}/` resolves `account_id` and fetches the list **live from TMDb**.
 
 ---
 
@@ -62,7 +63,7 @@ config/
   settings/
     base.py
 favorites/
-  models.py         # FavoritedList (stores only account_id + list_name)
+  models.py         # FavoritedList (only account_id + list_name)
   serializers.py
   views.py          # favorites + share + shared (TMDb-backed)
 tmdb/
@@ -98,7 +99,7 @@ poetry install --no-root
 ```
 
 ### 4) Migrate DB
-> DB is only used for `FavoritedList` (share feature).
+> The DB is only used for `FavoritedList` (sharing feature).
 ```bash
 poetry run python manage.py migrate
 ```
@@ -109,18 +110,18 @@ poetry run python manage.py runserver
 ```
 
 Swagger / Redoc:
-- Swagger UI: `http://localhost:8000/api/docs/`
+- Swagger UI: `http://localhost:8000/api/docs/`  
 - OpenAPI JSON: `http://localhost:8000/api/schema/`
 
 ---
 
 ## Environment
 
-Create `.env`:
+Create a `.env`:
 ```ini
 DEBUG=True
 SECRET_KEY=change-me
-DATABASE_URL=postgrsql://...
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
 
 # TMDb (V4 token). Keep the "Bearer " prefix.
 TMDB_API_KEY=Bearer <your_tmdb_v4_token>
@@ -129,7 +130,7 @@ TMDB_API_KEY=Bearer <your_tmdb_v4_token>
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 ```
 
-> For Postgres, set `DATABASE_URL=postgres://user:pass@host:5432/dbname`.
+> For local SQLite: `DATABASE_URL=sqlite:///db.sqlite3`
 
 ---
 
@@ -140,7 +141,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:5173
 | `poetry run python manage.py runserver` | Dev server |
 | `poetry run python manage.py migrate` | Apply migrations |
 | `poetry run pytest -q` | Run tests |
-| `make run` / `make test` / `make lint` / `make type` | If you use the provided Makefile |
+| `make run` / `make test` / `make lint` / `make type` | If you use the Makefile |
 
 ---
 
@@ -155,9 +156,9 @@ Authorization: Bearer <TMDB_V4_TOKEN>
 
 | Method | Route | Description | Query |
 |---|---|---|---|
-| GET | `/api/v1/movies/discover/` | Discover movies (TMDb) | `language`, `page`, `include_adult`, `include_video`, `sort_by`, `account_id` *(optional, used to flag `favorite` via TMDb favorites)* |
-| GET | `/api/v1/movies/search/` | Search movies by title (TMDb) | `query` **required**, `language`, `page`, `account_id` *(optional to flag favorites)* |
-| GET | `/api/v1/movies/{tmdb_id}/` | Movie details (TMDb) | — |
+| GET | `/api/v1/movies/discover/` | Discover (TMDb) | `language`, `page`, `include_adult`, `include_video`, `sort_by`, `account_id` *(optional, to mark `favorite` via TMDb)* |
+| GET | `/api/v1/movies/search/` | Search by title (TMDb) | `query` **required**, `language`, `page`, `account_id` *(optional to mark favorites)* |
+| GET | `/api/v1/movies/{tmdb_id}/` | Details (TMDb) | — |
 
 **Examples**
 ```bash
@@ -191,12 +192,12 @@ curl -X POST 'http://localhost:8000/api/v1/favorites/'   -H 'Authorization: Bear
 
 | Method | Route | Description | Body / Path |
 |---|---|---|---|
-| POST | `/api/v1/favorites/share/` | Create or update a share record; stores **only** `account_id` + `list_name` | JSON: `{ "account_id": 123, "list_name": "My List" }` |
-| GET | `/api/v1/favorites/shared/{list_name}/` | Resolve `account_id` by `list_name`, then fetch **live** favorites from TMDb | Path: `list_name` |
+| POST | `/api/v1/favorites/share/` | Create/update a share record; stores **only** `account_id` + `list_name` | JSON: `{ "account_id": 123, "list_name": "My List" }` |
+| GET | `/api/v1/favorites/shared/{list_name}/` | Resolve `account_id` and fetch favorites **live** from TMDb | Path: `list_name` |
 
 **Notes**
-- If the same `account_id` shares again, the API **updates** the `list_name` instead of creating another record.
-- Shared GET requires the same `Authorization` header to call TMDb.
+- If the same `account_id` shares again, the API **updates** the `list_name`.
+- The shared GET requires the same `Authorization` header to call TMDb.
 
 ---
 
@@ -207,7 +208,7 @@ poetry run pytest -q
 ```
 
 Current suites:
-- `tests/tmdb/test_views.py`: discover, search, details (TMDb mocked)
+- `tests/tmdb/test_views.py`: discover, search, details (TMDb mocked)  
 - `tests/favorites/test_views.py`: favorites list/toggle (TMDb mocked)
 
 ---
@@ -216,9 +217,38 @@ Current suites:
 
 | Symptom | Check |
 |---|---|
-| 401 from TMDb | Ensure the header is exactly `Authorization: Bearer <token>` (V4 Auth). |
+| 401 from TMDb | Header exactly `Authorization: Bearer <token>` (V4). |
 | CORS in the browser | Set `CORS_ALLOWED_ORIGINS=http://localhost:5173` (or your front-end URL). |
 | DB errors | Only `FavoritedList` uses the DB; run migrations. |
-| “favorite” flag not appearing | Provide `account_id` in discover/search queries and include a valid `Authorization` header so the API can read favorites from TMDb. |
+| `favorite` flag missing | Provide `account_id` on discover/search and include a valid `Authorization` header so the API can read favorites on TMDb. |
 
 ---
+
+## Deploy & Rationale
+
+**Production URLs**
+- Front (Vercel): https://rate-movies-ag.vercel.app/  
+- Back (Render): https://rate-movies-api.onrender.com
+
+**Why Render for Backend + Postgres?**
+- **Simple DX**: build/deploy from Git, real-time logs, easy env vars.  
+- **Practical free tier** for prototyping/PoCs.  
+- **Integrations**: managed web services, workers, and databases (Postgres) with quick setup.  
+- **Basic scalability** without re-planning infra — a great fit for this project phase.
+
+> ⚠️ **Heads up (Render Free Plan)**  
+> Render **idles** the service after ~**5 minutes** without traffic. The first request afterwards will suffer a **cold start**, which may take **up to ~50s**. This is expected for the free tier.
+
+---
+
+## Limitations & Next Steps
+
+Because my current full-time job takes most of my day, I couldn’t implement several nice-to-have features yet:
+
+- **Metrics** (APM, dashboards, distributed tracing)  
+- **Watchlist** (besides favorites)  
+- **TV routes** (current focus is Movie)  
+- **Higher coverage** (more unit/integration tests and error scenarios)  
+- Additional robustness/observability/CI-CD improvements
+
+Each repository’s README explains the tech choices and how to run things in more detail.
