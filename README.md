@@ -1,220 +1,224 @@
 # Movies & Favorites API (Django + DRF)
 
-A backend service built with **Django** and **Django REST Framework (DRF)** that integrates with **TMDb API** to manage movie data and user favorites.  
-This project includes endpoints for listing movies, fetching detailed information (trailers, cast, and streaming providers), handling favorites, and sharing user favorite lists through a generated link.
+Backend (Django + DRF) that integrates with **TMDb**.  
+It exposes endpoints to **discover**, **search**, and **fetch movie details** from TMDb, plus **favorites** operations that act **directly on TMDb**.  
+For sharing, the API stores **only** `account_id` and a human-friendly `list_name`. The shared listing itself is fetched **live from TMDb**.
 
 ---
 
 ## Table of Contents
-1. [Project Overview](#project-overview)
+1. [Overview](#overview)
 2. [Tech Stack](#tech-stack)
-3. [Features](#features)
-4. [Project Structure](#project-structure)
-5. [Setup & Installation](#setup--installation)
-6. [Environment Variables](#environment-variables)
-7. [Available Commands](#available-commands)
-8. [API Endpoints](#api-endpoints)
+3. [Key Behavior](#key-behavior)
+4. [Project Layout](#project-layout)
+5. [Setup](#setup)
+6. [Environment](#environment)
+7. [Commands](#commands)
+8. [API](#api)
 9. [Testing](#testing)
 10. [Troubleshooting](#troubleshooting)
 
 ---
 
-## Project Overview
-This service acts as a **Backend-for-Frontend (BFF)** for a movie web application.  
-It allows clients to:
-- Fetch and filter movie data from TMDb.
-- Manage user favorites via session-based profiles.
-- Share a list of favorites using a generated public link.
+## Overview
+This service plays the role of a **BFF** for a movie app:
+
+- **Discover/Search** movies (TMDb).
+- **Movie details** (trailers/providers/credits handled inside the details view).
+- **Favorites**: list and toggle **on TMDb** (no local persistence).
+- **Shared favorites**: store only `account_id` + `list_name`; when someone opens a shared list, the API fetches the **current** favorites from TMDb for that account.
 
 ---
 
 ## Tech Stack
 - Python 3.12+
 - Django 5.x
-- Django REST Framework (DRF)
-- django-environ
-- django-cors-headers
-- django-filter
-- drf-spectacular
+- Django REST Framework
+- drf-spectacular (OpenAPI)
+- django-environ, django-filter, django-cors-headers
 - requests
-- pytest + model-bakery
-- Poetry 2.x
+- Poetry
+- pytest + pytest-django
 
 ---
 
-## Features
+## Key Behavior
 
-### Movies
-1. List all movies  
-2. Get movie by ID  
-   - Fetch movie details  
-   - Fetch trailer  
-   - Fetch cast  
-   - Fetch streaming providers  
-3. Search movies by name  
-
-### Favorites
-4. Add or remove a movie from favorites  
-5. Share favorites list  
-   - Generates a public link based on user session  
-   - Accepts a name parameter in the request  
-
-### Other
-6. Swagger documentation generated with drf-spectacular  
+- **Authorization**: All TMDb calls require header `Authorization: Bearer <TMDB_V4_TOKEN>`.
+- **Favorites**:
+  - `GET /favorites/` reads favorites **from TMDb**.
+  - `POST /favorites/` toggles favorite **on TMDb**.
+  - No rows are created/updated for favorites locally.
+- **Shared favorites**:
+  - `POST /favorites/share/` stores only `{account_id, list_name}`.
+    - If the same `account_id` shares again, we **update** the `list_name` (idempotent).
+  - `GET /favorites/shared/{list_name}/` loads the record to resolve `account_id` and then fetches **live** favorites from TMDb.
 
 ---
 
-## Project Structure
+## Project Layout
 ```
 config/
   settings/
     base.py
-    local.py
-    prod.py
 favorites/
-  models.py
+  models.py         # FavoritedList (stores only account_id + list_name)
   serializers.py
-  views.py
-  services.py
+  views.py          # favorites + share + shared (TMDb-backed)
 tmdb/
-  client.py
-  views.py
+  client.py         # TMDb client
+  serializers.py
+  views.py          # discover, search, movie details (TMDb-backed)
 tests/
-  test_favorites.py
-  test_tmdb.py
+  favorites/
+    test_views.py
+  tmdb/
+    test_views.py
 ```
 
 ---
 
-## Setup & Installation
+## Setup
 
-### 1. Clone the repository
+### 1) Clone
 ```bash
 git clone https://github.com/<your-username>/movies-api.git
 cd movies-api
 ```
 
----
-
-### 2. Install Poetry (v2.x recommended)
-If you don’t have Poetry installed, run:
+### 2) Install Poetry
 ```bash
 curl -sSL https://install.python-poetry.org | python3 -
-```
-
-Then verify the installation:
-```bash
 poetry --version
 ```
 
-> **Note:** Poetry 2 no longer creates virtual environments automatically with `poetry shell`.  
-> You can activate the environment manually using:
-> ```bash
-> poetry env activate
-> Run poetry env activate output
-> poetry install
-> poetry run python manage.py runserver
-> ```
-
-If you prefer not to activate the shell, prefix all commands with `poetry run`.
-
----
-
-### 3. Configure the project environment
-Install dependencies:
+### 3) Install deps
 ```bash
 poetry install --no-root
 ```
 
----
-
-### 4. Apply database migrations
+### 4) Migrate DB
+> DB is only used for `FavoritedList` (share feature).
 ```bash
 poetry run python manage.py migrate
 ```
 
----
-
-### 5. Run the development server
+### 5) Run
 ```bash
 poetry run python manage.py runserver
 ```
 
-Swagger documentation will be available at:
-```
-http://localhost:8000/api/docs/
-```
+Swagger / Redoc:
+- Swagger UI: `http://localhost:8000/api/docs/`
+- OpenAPI JSON: `http://localhost:8000/api/schema/`
 
 ---
 
-## Environment Variables
+## Environment
 
-Copy the example file:
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-```
+Create `.env`:
+```ini
 DEBUG=True
 SECRET_KEY=change-me
-DATABASE_URL=sqlite:///db.sqlite3
+DATABASE_URL=postgrsql://...
+
+# TMDb (V4 token). Keep the "Bearer " prefix.
 TMDB_API_KEY=Bearer <your_tmdb_v4_token>
+
+# Frontend (Vite default)
 CORS_ALLOWED_ORIGINS=http://localhost:5173
 ```
 
----
-
-## Available Commands
-
-| Command | Description |
-|----------|-------------|
-| `make run` | Start the development server |
-| `make migrate` | Apply migrations |
-| `make test` | Run all tests |
-| `make lint` | Format and lint the codebase |
-| `make type` | Run mypy type checks |
+> For Postgres, set `DATABASE_URL=postgres://user:pass@host:5432/dbname`.
 
 ---
 
-## API Endpoints
+## Commands
 
-| Method | Endpoint | Description |
-|---------|-----------|-------------|
-| GET | `/api/v1/movies/` | List all movies |
-| GET | `/api/v1/movies/{id}/` | Get movie details |
-| GET | `/api/v1/movies/{id}/trailer/` | Get trailer |
-| GET | `/api/v1/movies/{id}/cast/` | Get cast |
-| GET | `/api/v1/movies/{id}/providers/` | Get streaming providers |
-| GET | `/api/v1/search/?q={name}` | Search movies by name |
-| GET | `/api/v1/favorites/` | List user favorites |
-| POST | `/api/v1/favorites/` | Add movie to favorites |
-| DELETE | `/api/v1/favorites/{tmdb_id}/` | Remove movie from favorites |
-| POST | `/api/v1/favorites/share/` | Generate a public share link |
+| Command | What it does |
+|---|---|
+| `poetry run python manage.py runserver` | Dev server |
+| `poetry run python manage.py migrate` | Apply migrations |
+| `poetry run pytest -q` | Run tests |
+| `make run` / `make test` / `make lint` / `make type` | If you use the provided Makefile |
+
+---
+
+## API
+
+### Auth header (required for TMDb-backed routes)
+```
+Authorization: Bearer <TMDB_V4_TOKEN>
+```
+
+### Movies
+
+| Method | Route | Description | Query |
+|---|---|---|---|
+| GET | `/api/v1/movies/discover/` | Discover movies (TMDb) | `language`, `page`, `include_adult`, `include_video`, `sort_by`, `account_id` *(optional, used to flag `favorite` via TMDb favorites)* |
+| GET | `/api/v1/movies/search/` | Search movies by title (TMDb) | `query` **required**, `language`, `page`, `account_id` *(optional to flag favorites)* |
+| GET | `/api/v1/movies/{tmdb_id}/` | Movie details (TMDb) | — |
+
+**Examples**
+```bash
+# Discover
+curl 'http://localhost:8000/api/v1/movies/discover/?page=1&language=pt-BR&account_id=123'   -H 'Authorization: Bearer <TMDB_V4_TOKEN>'
+
+# Search
+curl 'http://localhost:8000/api/v1/movies/search/?query=Inception&language=pt-BR&account_id=123'   -H 'Authorization: Bearer <TMDB_V4_TOKEN>'
+
+# Details
+curl 'http://localhost:8000/api/v1/movies/27205/'   -H 'Authorization: Bearer <TMDB_V4_TOKEN>'
+```
+
+### Favorites (TMDb only)
+
+| Method | Route | Description | Body / Query |
+|---|---|---|---|
+| GET | `/api/v1/favorites/` | List favorites from TMDb | `account_id` **required**, `page` *(optional)* |
+| POST | `/api/v1/favorites/` | Toggle favorite on TMDb | JSON: `{ "account_id": int, "movie_id": int, "favorite": bool=true, "media_type": "movie" }` |
+
+**Examples**
+```bash
+# List
+curl 'http://localhost:8000/api/v1/favorites/?account_id=123'   -H 'Authorization: Bearer <TMDB_V4_TOKEN>'
+
+# Toggle
+curl -X POST 'http://localhost:8000/api/v1/favorites/'   -H 'Authorization: Bearer <TMDB_V4_TOKEN>'   -H 'Content-Type: application/json'   -d '{"account_id":123,"movie_id":27205,"favorite":true,"media_type":"movie"}'
+```
+
+### Shared favorites
+
+| Method | Route | Description | Body / Path |
+|---|---|---|---|
+| POST | `/api/v1/favorites/share/` | Create or update a share record; stores **only** `account_id` + `list_name` | JSON: `{ "account_id": 123, "list_name": "My List" }` |
+| GET | `/api/v1/favorites/shared/{list_name}/` | Resolve `account_id` by `list_name`, then fetch **live** favorites from TMDb | Path: `list_name` |
+
+**Notes**
+- If the same `account_id` shares again, the API **updates** the `list_name` instead of creating another record.
+- Shared GET requires the same `Authorization` header to call TMDb.
 
 ---
 
 ## Testing
 
-Run all tests:
 ```bash
 poetry run pytest -q
 ```
 
-Recommended tools:
-- pytest
-- pytest-django
-- model-bakery
+Current suites:
+- `tests/tmdb/test_views.py`: discover, search, details (TMDb mocked)
+- `tests/favorites/test_views.py`: favorites list/toggle (TMDb mocked)
 
 ---
 
 ## Troubleshooting
 
-| Issue | Solution |
-|--------|-----------|
-| `poetry shell` not found | Use `poetry run ...` or `poetry env activate` |
-| Package installation errors | Add `package-mode = false` in `pyproject.toml` |
-| TMDb 401 Unauthorized | Check if `TMDB_API_KEY` includes the `Bearer` prefix |
-| CORS issues | Ensure `CORS_ALLOWED_ORIGINS` is properly set in `.env` |
+| Symptom | Check |
+|---|---|
+| 401 from TMDb | Ensure the header is exactly `Authorization: Bearer <token>` (V4 Auth). |
+| CORS in the browser | Set `CORS_ALLOWED_ORIGINS=http://localhost:5173` (or your front-end URL). |
+| DB errors | Only `FavoritedList` uses the DB; run migrations. |
+| “favorite” flag not appearing | Provide `account_id` in discover/search queries and include a valid `Authorization` header so the API can read favorites from TMDb. |
 
 ---

@@ -98,6 +98,77 @@ class DiscoverMoviesView(BaseTMDBView):
         return Response(out.data, status=status.HTTP_200_OK)
 
 
+class SearchMoviesView(BaseTMDBView):
+    serializer_class = MovieDiscoverListSerializer
+
+    @extend_schema(
+        tags=["Movies"],
+        summary="Search movies by title",
+        description="Searches TMDb by movie title and flags favorites for the given account_id.",
+        parameters=[
+            OpenApiParameter(
+                name="query",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="Movie title to search",
+                required=True,
+            ),
+            OpenApiParameter(
+                name="page",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Page number (default=1)",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="language",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description="Locale (default=en-US)",
+                required=False,
+            ),
+            OpenApiParameter(
+                name="account_id",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Account ID used to flag movies favorited on TMDb.",
+                required=False,
+            ),
+        ],
+        responses={200: OpenApiResponse(response=MovieDiscoverListSerializer)},
+    )
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        q = request.query_params.get("query")
+        if not q:
+            return Response({"error": "'query' is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        page = request.query_params.get("page", 1)
+        language = request.query_params.get("language", "en-US")
+
+        r = requests.get(
+            "https://api.themoviedb.org/3/search/movie",
+            params={"query": q, "page": page, "language": language, "include_adult": False},
+            headers=self.tmdb_client.session.headers,
+            timeout=10,
+        )
+        data = r.json()
+        results = data.get("results", [])
+        for movie in results:
+            movie["favorite"] = False
+
+        account_id = request.query_params.get("account_id")
+        if account_id:
+            fav_ids = DiscoverMoviesView._fetch_tmdb_favorite_ids(self, account_id)
+            if fav_ids:
+                for movie in results:
+                    if movie.get("id") in fav_ids:
+                        movie["favorite"] = True
+
+        out = self.serializer_class(data=data)
+        out.is_valid(raise_exception=False)
+        return Response(out.data, status=r.status_code)
+
+
 class MovieDetailsView(BaseTMDBView):
     serializer_class = MovieDetailsSerializer
 

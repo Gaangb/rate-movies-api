@@ -52,7 +52,19 @@ class FavoritesView(BaseTMDBView):
             headers=self.tmdb_headers,
             timeout=10,
         )
-        return Response(r.json(), status=r.status_code)
+
+        data = r.json()
+        list_name = (
+            FavoritedList.objects
+            .filter(account_id=account_id)
+            .order_by("-created_at")
+            .values_list("list_name", flat=True)
+            .first()
+        )
+        if isinstance(data, dict):
+            data["list_name"] = list_name if list_name is not None else None
+
+        return Response(data, status=r.status_code)
 
     @extend_schema(
         tags=["Favorites"],
@@ -87,9 +99,9 @@ class FavoritesView(BaseTMDBView):
 class ShareFavoritedListView(BaseTMDBView):
     @extend_schema(
         tags=["Favorites"],
-        summary="Create shareable favorites list (store only name and account)",
+        summary="Create or update shareable favorites list (stores only name and account)",
         request={"application/json": {"example": {"account_id": 1234567, "list_name": "October favorites"}}},
-        responses={201: OpenApiResponse(response=FavoritedListSerializer)},
+        responses={200: OpenApiResponse(response=FavoritedListSerializer)},
     )
     def post(self, request: Request) -> Response:
         account_id = request.data.get("account_id")
@@ -97,12 +109,16 @@ class ShareFavoritedListView(BaseTMDBView):
         if not account_id or not list_name:
             return Response({"error": "account_id and list_name are required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        obj, _ = FavoritedList.objects.update_or_create(
-            account_id=account_id,
-            list_name=list_name,
-            defaults={},
-        )
-        return Response(FavoritedListSerializer(obj).data, status=status.HTTP_201_CREATED)
+        obj = FavoritedList.objects.filter(account_id=account_id).order_by("-created_at").first()
+        if obj:
+            obj.list_name = list_name
+            obj.save(update_fields=["list_name"])
+            status_code = status.HTTP_200_OK
+        else:
+            obj = FavoritedList.objects.create(account_id=account_id, list_name=list_name)
+            status_code = status.HTTP_201_CREATED
+
+        return Response(FavoritedListSerializer(obj).data, status=status_code)
 
 
 class GetSharedFavoritedListView(BaseTMDBView):
