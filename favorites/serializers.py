@@ -3,24 +3,11 @@ from rest_framework import serializers
 from favorites.models import FavoritedList, FavoritedMovie
 
 
-class FavoritedMovieSerializer(serializers.ModelSerializer):
-    genre_ids = serializers.ListField(
-        child=serializers.IntegerField(), required=False
-    )
-
-    class Meta:
-        model = FavoritedMovie
-        fields = [
-            "account_id",
-            "movie_id",
-            "title",
-            "overview",
-            "poster_path",
-            "release_date",
-            "genre_ids",
-            "vote_average",
-            "created_at",
-        ]
+class FavoritedMovieSerializer(serializers.Serializer):
+    account_id = serializers.IntegerField()
+    movie_id = serializers.IntegerField()
+    favorite = serializers.BooleanField(required=False, default=True)
+    midia_type = serializers.CharField(required=False, default="movie", max_length=20)
 
 
 class FavoritedListSerializer(serializers.ModelSerializer):

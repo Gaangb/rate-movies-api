@@ -2,7 +2,7 @@ from typing import Any
 
 import requests
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
-from favorites.models import FavoritedList, FavoritedMovie
+from favorites.models import FavoritedList
 from favorites.serializers import FavoritedListSerializer, FavoritedMovieSerializer
 from rest_framework import status
 from rest_framework.request import Request
@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
 
 
-class BaseTMDBView(APIView): #TODO -  reuse
+class BaseTMDBView(APIView):
     def initialize_request(self, request: Request, *args: Any, **kwargs: Any) -> Request:
         req = super().initialize_request(request=request, *args, **kwargs)
         auth_header = req.headers.get("Authorization")
@@ -32,52 +32,38 @@ class FavoritesView(BaseTMDBView):
     @extend_schema(
         tags=["Favorites"],
         summary="List favorite movies",
-        description="Returns favorite movies for a TMDb account. Requires Authorization header.",
         parameters=[
-            OpenApiParameter(
-                name="account_id",
-                description="TMDb account ID",
-                required=True,
-                type=int,
-                location=OpenApiParameter.QUERY,
-            ),
-            OpenApiParameter(
-                name="page",
-                description="Page number (default=1)",
-                required=False,
-                type=int,
-                location=OpenApiParameter.QUERY,
-            ),
+            OpenApiParameter(name="account_id", type=int, location=OpenApiParameter.QUERY, required=True),
+            OpenApiParameter(name="page", type=int, location=OpenApiParameter.QUERY, required=False),
         ],
-        responses={200: OpenApiResponse(description="Favorites listed successfully")},
+        responses={200: OpenApiResponse(description="OK")},
     )
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         account_id = request.query_params.get("account_id")
         page = request.query_params.get("page", 1)
-
         if not account_id:
             return Response({"error": "'account_id' is required."}, status=status.HTTP_400_BAD_REQUEST)
         if not self.tmdb_headers:
             return Response({"error": "Missing TMDb Authorization token."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        resp = requests.get(
+        r = requests.get(
             f"{TMDB_BASE_URL}/account/{account_id}/favorite/movies",
             params={"language": "en-US", "page": page, "sort_by": "created_at.asc"},
             headers=self.tmdb_headers,
+            timeout=10,
         )
-        return Response(resp.json(), status=resp.status_code)
+        return Response(r.json(), status=r.status_code)
 
     @extend_schema(
         tags=["Favorites"],
         summary="Favorite or unfavorite a movie",
-        description="Syncs favorite state with TMDb and persists local copy when favoriting.",
         request=FavoritedMovieSerializer,
-        responses={200: OpenApiResponse(description="Synchronized successfully")},
+        responses={200: OpenApiResponse(description="OK")},
     )
     def post(self, request: Request) -> Response:
-        serializer = FavoritedMovieSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
+        ser = FavoritedMovieSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        data = ser.validated_data
 
         account_id = data["account_id"]
         movie_id = data["movie_id"]
@@ -88,79 +74,61 @@ class FavoritesView(BaseTMDBView):
             return Response({"error": "Missing TMDb Authorization token."}, status=status.HTTP_401_UNAUTHORIZED)
 
         payload = {"media_type": media_type, "media_id": movie_id, "favorite": favorite}
-        tmdb_resp = requests.post(
+        r = requests.post(
             f"{TMDB_BASE_URL}/account/{account_id}/favorite",
             headers=self.tmdb_headers,
             json=payload,
+            timeout=10,
         )
 
-        if favorite:
-            FavoritedMovie.objects.update_or_create(
-                account_id=account_id,
-                movie_id=movie_id,
-                defaults={
-                    "title": data.get("title", ""),
-                    "overview": data.get("overview"),
-                    "poster_path": data.get("poster_path"),
-                    "release_date": data.get("release_date"),
-                    "genre_ids": data.get("genre_ids", []),
-                    "vote_average": data.get("vote_average", 0.0),
-                },
-            )
-        else:
-            FavoritedMovie.objects.filter(account_id=account_id, movie_id=movie_id).delete()
-
-        return Response(tmdb_resp.json(), status=tmdb_resp.status_code)
+        return Response(r.json(), status=r.status_code)
 
 
-class ShareFavoritedListView(APIView):
+class ShareFavoritedListView(BaseTMDBView):
     @extend_schema(
         tags=["Favorites"],
-        summary="Create shareable favorites list",
-        description="Creates a shareable list containing the provided movie IDs that are currently favorited by the account.",
-        request={
-            "application/json": {
-                "example": {
-                    "account_id": 1234567,
-                    "list_name": "October favorites",
-                    "movie_ids": [1156594, 872585, 502356],
-                }
-            }
-        },
+        summary="Create shareable favorites list (store only name and account)",
+        request={"application/json": {"example": {"account_id": 1234567, "list_name": "October favorites"}}},
         responses={201: OpenApiResponse(response=FavoritedListSerializer)},
     )
     def post(self, request: Request) -> Response:
         account_id = request.data.get("account_id")
         list_name = request.data.get("list_name")
-        movie_ids = request.data.get("movie_ids", [])
-
         if not account_id or not list_name:
             return Response({"error": "account_id and list_name are required."}, status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(movie_ids, list) or not all(isinstance(m, int) for m in movie_ids):
-            return Response({"error": "movie_ids must be a list of integers."}, status=status.HTTP_400_BAD_REQUEST)
-        if not movie_ids:
-            return Response({"error": "movie_ids cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
 
-        valid_ids = list(
-            FavoritedMovie.objects.filter(account_id=account_id, movie_id__in=movie_ids).values_list("movie_id", flat=True)
+        obj, _ = FavoritedList.objects.update_or_create(
+            account_id=account_id,
+            list_name=list_name,
+            defaults={},
         )
-        if not valid_ids:
-            return Response(
-                {"error": "None of the provided movie_ids are favorited for this account_id."},
-                status=status.HTTP_400_BAD_REQUEST,
+        return Response(FavoritedListSerializer(obj).data, status=status.HTTP_201_CREATED)
+
+
+class GetSharedFavoritedListView(BaseTMDBView):
+    def _fetch_tmdb_favorites_all(self, account_id: int | str) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            r = requests.get(
+                f"{TMDB_BASE_URL}/account/{account_id}/favorite/movies",
+                params={"language": "en-US", "page": page, "sort_by": "created_at.asc"},
+                headers=self.tmdb_headers,
+                timeout=10,
             )
+            if r.status_code >= 400:
+                return []
+            payload = r.json()
+            items.extend(payload.get("results", []))
+            total_pages = payload.get("total_pages") or 1
+            if page >= total_pages:
+                break
+            page += 1
+        return items
 
-        fav_list, _ = FavoritedList.objects.update_or_create(
-            account_id=account_id, list_name=list_name, defaults={"movie_ids": valid_ids}
-        )
-        return Response(FavoritedListSerializer(fav_list).data, status=status.HTTP_201_CREATED)
-
-
-class GetSharedFavoritedListView(APIView):
     @extend_schema(
         tags=["Favorites"],
-        summary="Get shared favorites by list name",
-        description="Returns movies belonging to the most recent shared list identified by list_name.",
+        summary="Get shared favorites by list name (live from TMDb)",
         responses={200: OpenApiResponse(response=FavoritedMovieSerializer(many=True))},
     )
     def get(self, request: Request, list_name: str) -> Response:
@@ -168,9 +136,25 @@ class GetSharedFavoritedListView(APIView):
             fav_list = FavoritedList.objects.filter(list_name__iexact=list_name).latest("created_at")
         except FavoritedList.DoesNotExist:
             return Response({"error": "No shared list found with this name."}, status=status.HTTP_404_NOT_FOUND)
+        if not self.tmdb_headers:
+            return Response({"error": "Missing TMDb Authorization token."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        movies = FavoritedMovie.objects.filter(
-            account_id=fav_list.account_id,
-            movie_id__in=fav_list.movie_ids,
-        )
-        return Response(FavoritedMovieSerializer(movies, many=True).data, status=status.HTTP_200_OK)
+        results = self._fetch_tmdb_favorites_all(fav_list.account_id)
+        mapped = [
+            {
+                "account_id": fav_list.account_id,
+                "movie_id": m.get("id"),
+                "title": m.get("title") or "",
+                "overview": m.get("overview"),
+                "poster_path": m.get("poster_path"),
+                "release_date": m.get("release_date"),
+                "genre_ids": m.get("genre_ids") or [],
+                "vote_average": m.get("vote_average") or 0.0,
+                "created_at": None,
+            }
+            for m in results
+            if isinstance(m.get("id"), int)
+        ]
+        out = FavoritedMovieSerializer(data=mapped, many=True)
+        out.is_valid(raise_exception=False)
+        return Response(out.data, status=status.HTTP_200_OK)

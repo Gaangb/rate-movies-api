@@ -27,7 +27,6 @@ class FavoritedMovie(models.Model):
 class FavoritedList(models.Model):
     account_id = models.BigIntegerField()
     list_name = models.CharField(max_length=255)
-    movie_ids = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
