@@ -17,7 +17,9 @@ class TMDBClient:
             self.session.headers.update({"Authorization": token})
         self.timeout = 10
 
-    def _cached_request(self, path: str, params: Optional[dict[str, Union[str, int, bool]]]) -> Dict[str, Any]:
+    def _cached_request(
+        self, path: str, params: Optional[dict[str, Union[str, int, bool]]]
+    ) -> Dict[str, Any]:
         url = f"{self.BASE}{path}"
         key_params = params or {}
         cache_key = f"tmdb:{url}:{str(sorted(key_params.items()))}"
@@ -31,7 +33,9 @@ class TMDBClient:
         cache.set(cache_key, data, timeout=600)
         return data
 
-    def discover_movies(self, params: dict[str, Union[str, int, bool]]) -> Dict[str, Any]:
+    def discover_movies(
+        self, params: dict[str, Union[str, int, bool]]
+    ) -> Dict[str, Any]:
         return self._cached_request("/discover/movie", params=params)
 
     def movie_details(self, tmdb_id: int) -> Dict[str, Any]:
@@ -40,11 +44,20 @@ class TMDBClient:
         if details.get("poster_path"):
             details["poster_path"] = f"{self.IMAGE_BASE}w500{details['poster_path']}"
         if details.get("backdrop_path"):
-            details["backdrop_path"] = f"{self.IMAGE_BASE}w780{details['backdrop_path']}"
+            details["backdrop_path"] = (
+                f"{self.IMAGE_BASE}w780{details['backdrop_path']}"
+            )
 
-        videos_data = self._cached_request(f"/movie/{tmdb_id}/videos", {"language": self.language})
+        videos_data = self._cached_request(
+            f"/movie/{tmdb_id}/videos", {"language": self.language}
+        )
         youtube_videos = [
-            {"name": v.get("name"), "url": f"https://www.youtube.com/watch?v={v['key']}", "site": v.get("site"), "type": v.get("type")}
+            {
+                "name": v.get("name"),
+                "url": f"https://www.youtube.com/watch?v={v['key']}",
+                "site": v.get("site"),
+                "type": v.get("type"),
+            }
             for v in videos_data.get("results", [])
             if v.get("site") == "YouTube" and v.get("key")
         ]
@@ -60,7 +73,11 @@ class TMDBClient:
         filtered_credits = [
             {
                 "name": c.get("name"),
-                "profile_path": f"{self.IMAGE_BASE}w185{c['profile_path']}" if c.get("profile_path") else None,
+                "profile_path": (
+                    f"{self.IMAGE_BASE}w185{c['profile_path']}"
+                    if c.get("profile_path")
+                    else None
+                ),
                 "character": c.get("character"),
                 "known_for_department": c.get("known_for_department"),
             }

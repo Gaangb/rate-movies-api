@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.urls import include, path
-from config.health import HealthCheckView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+from config.health import HealthCheckView
 
 urlpatterns = [
     path("admin/", admin.site.urls),

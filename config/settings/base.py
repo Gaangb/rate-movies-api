@@ -1,7 +1,7 @@
-
 from pathlib import Path
-import environ
 from typing import Union
+
+import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -14,7 +14,9 @@ if env_file.exists():
 SECRET_KEY = env("SECRET_KEY", default="dev-secret-change-me")
 DEBUG = env.bool("DEBUG", default=False)
 allowed_hosts_value = env("ALLOWED_HOSTS", default="")
-ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_value.split(",") if h.strip()] or ["*"]
+ALLOWED_HOSTS = [h.strip() for h in allowed_hosts_value.split(",") if h.strip()] or [
+    "*"
+]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.vercel\.app$",
 ]

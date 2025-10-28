@@ -4,7 +4,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("favorites", "0002_favoritedmovie_genre_ids_favoritedmovie_overview_and_more"),
     ]
